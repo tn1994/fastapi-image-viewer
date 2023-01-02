@@ -1,11 +1,17 @@
+import os
 import logging
-from typing import Final
+from typing import Final, Union
 from contextlib import suppress
 
 from py3pin.Pinterest import Pinterest
 
 from .utils.re_util import get_only_number
-from ..models.pinterest_query_model import QueryModel
+
+try:
+    from ..models.pinterest_query_model import QueryModel
+except ImportError:
+    # for Deta.sh hadling
+    from models.pinterest_query_model import QueryModel
 
 logger = logging.getLogger(__name__)
 
@@ -36,7 +42,14 @@ class PinterestService:
             self.__setup()
 
     def __setup(self):
-        self.pinterest = Pinterest()
+        """
+        Handling about OSError: [Errno 30] Read-only file system: 'data'
+        Must Exist {Current Directory}/data/data.json
+        And chmod directory-and-file
+        :return:
+        """
+        _cred_roor: str = os.path.join(os.path.dirname(__file__), 'data')
+        self.pinterest = Pinterest(cred_root=_cred_roor, email='data.json')
 
     def __reset_list(self):
         if 0 != len(self.image_info_list):
@@ -72,12 +85,12 @@ class PinterestService:
             for item in search_batch:
                 self.image_info_list.append(item['image_cover_hd_url'])
                 # self.pin_id_list.append(item['pin_id'])
-                match scope:
-                    case 'boards':
-                        self.board_id_list.append(item['id'])
-                        self.board_pin_count_list.append(item['pin_count'])
-                    case _:
-                        self.pin_id_list.append(item['id'])
+
+                if 'boards' == scope:
+                    self.board_id_list.append(item['id'])
+                    self.board_pin_count_list.append(item['pin_count'])
+                else:
+                    self.pin_id_list.append(item['id'])
         except Exception as e:
             raise e
 
@@ -91,7 +104,7 @@ class PinterestService:
             return self.pinterest.search(
                 scope=scope, query=query, page_size=page_size)
 
-    def get_pin_count(self, board_id: str | int):
+    def get_pin_count(self, board_id: Union[str, int]):
         _idx = self.board_id_list.index(str(board_id))
         return self.board_pin_count_list[_idx]
 
@@ -119,15 +132,12 @@ class PinterestService:
 
         if page_size > 250:
             result = []
-            search_batch = self.pinterest.board_feed(
-                board_id=board_id, page_size=250)
+            search_batch = self.pinterest.board_feed(board_id=board_id)
             while len(search_batch) > 0 and len(result) < page_size:
                 result += search_batch
-                search_batch = self.pinterest.board_feed(
-                    board_id=board_id, page_size=250)
+                search_batch = self.pinterest.board_feed(board_id=board_id)
         else:
-            result = self.pinterest.board_feed(
-                board_id=board_id, page_size=page_size)
+            result = self.pinterest.board_feed(board_id=board_id, page_size=250)
         for item in result:
             with suppress(BaseException):
                 self.image_info_list.append(item['images']['orig']['url'])

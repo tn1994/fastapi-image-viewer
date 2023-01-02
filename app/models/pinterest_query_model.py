@@ -42,6 +42,7 @@ class QueryModel:
             'AOA': ['AOA', ],
             'Sister': ['Sister', ],
             'NiziU': ['NiziU', ],
+            'EXID': ['EXID', ],
 
         })
         object.__setattr__(self, '_query_announcer_dict', {

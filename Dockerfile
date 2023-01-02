@@ -1,6 +1,6 @@
 FROM python:3.11.1
 
-COPY requirements.txt .
+COPY app/requirements.txt .
 
 RUN pip3 install --upgrade pip setuptools && \
     pip3 install --upgrade flake8 autopep8 pytest refurb && \
